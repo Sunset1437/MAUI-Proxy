@@ -1,0 +1,52 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:viewModels="clr-namespace:MAUI_Proxy.ViewModels"
+             xmlns:conv="clr-namespace:MAUI_Proxy.Converters"
+             x:Class="MAUI_Proxy.MainPage"
+             Title="Proxy MVVM">
+
+    <ContentPage.BindingContext>
+        <viewModels:ProxyViewModel />
+    </ContentPage.BindingContext>
+
+    <ContentPage.Resources>
+        <conv:InverseBooleanConverter x:Key="InverseBooleanConverter"/>
+        <conv:ConnectionButtonColorConverter x:Key="ConnectionButtonColorConverter"/>
+        <conv:ConnectionButtonTextConverter x:Key="ConnectionButtonTextConverter"/>
+    </ContentPage.Resources>
+
+    <ScrollView>
+        <VerticalStackLayout Padding="20" Spacing="15">
+            <Frame BorderColor="#3F51B5" Padding="15">
+                <VerticalStackLayout Spacing="10">
+                    <Label Text="Настройки прокси сервера" HorizontalOptions="Center" FontSize="21" TextColor="#3F51B5"/>
+
+                    <Entry Text="{Binding Settings.IpAddress}"
+                           Placeholder="Proxy server IP"/>
+
+                    <Entry Text="{Binding Settings.Port}"
+                           Placeholder="Port"
+                           Keyboard="Numeric"/>
+
+                    <Entry Text="{Binding Settings.Username}"
+                           Placeholder="Username (optional)"/>
+
+                    <Entry Text="{Binding Settings.Password}"
+                           Placeholder="Password"
+                           IsPassword="False"/>
+                </VerticalStackLayout>
+            </Frame>
+
+            <ActivityIndicator IsRunning="{Binding IsConnecting}" Color="#3F51B5"/>
+
+            <Button Text="{Binding IsConnected, Converter={StaticResource ConnectionTextConverter}}"
+                    Command="{Binding ToggleConnectionCommand}"
+                    BackgroundColor="{Binding IsConnected, Converter={StaticResource ConnectionColorConverter}}"/>
+
+            <Label Text="{Binding Status}"
+                   FontAttributes="Bold"
+                   HorizontalOptions="Center"/>
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>
