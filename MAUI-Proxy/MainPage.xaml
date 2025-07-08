@@ -40,9 +40,9 @@
 
             <ActivityIndicator IsRunning="{Binding IsConnecting}" Color="#3F51B5"/>
 
-            <Button Text="{Binding IsConnected, Converter={StaticResource ConnectionTextConverter}}"
+            <Button Text="{Binding IsConnected, Converter={StaticResource ConnectionButtonTextConverter}}"
                     Command="{Binding ToggleConnectionCommand}"
-                    BackgroundColor="{Binding IsConnected, Converter={StaticResource ConnectionColorConverter}}"/>
+                    BackgroundColor="{Binding IsConnected, Converter={StaticResource ConnectionButtonColorConverter}}"/>
 
             <Label Text="{Binding Status}"
                    FontAttributes="Bold"

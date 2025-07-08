@@ -1,6 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">MAUIproxy</string>
-    <string name="vpn_notification_title">Прокси ВПН сервис? Сосал?</string>
-    <string name="vpn_notification_text">Перенаправление рафика через прокси</string>
+	<string name="app_name">MAUI Proxy</string>
+	<string name="channel_name">VPN Service</string>
+	<string name="channel_description">VPN Proxy notifications</string>
 </resources>

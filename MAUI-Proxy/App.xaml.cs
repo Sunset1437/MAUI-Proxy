@@ -8,15 +8,21 @@ namespace MAUI_Proxy
         {
             InitializeComponent();
 
-            var builder = MauiApp.CreateBuilder();
-            builder.UseMauiApp<App>();
+            var mainPage = new MainPage();
+            MainPage = new NavigationPage(mainPage);
 
-            // Регистрация зависимостей
-            builder.Services.AddSingleton<ProxyViewModel>();
-            builder.Services.AddTransient<MainPage>();
+            // Отложим установку BindingContext до момента, когда MauiContext будет доступен
+            this.HandlerChanged += OnHandlerChanged;
+        }
 
-            var mauiApp = builder.Build();
-            MainPage = new AppShell();
+        private void OnHandlerChanged(object sender, EventArgs e)
+        {
+            if (this.Handler != null && this.Handler.MauiContext != null)
+            {
+                var mainPage = (MainPage)((NavigationPage)MainPage).CurrentPage;
+                mainPage.BindingContext = this.Handler.MauiContext.Services.GetService<ProxyViewModel>();
+                this.HandlerChanged -= OnHandlerChanged; // Отписываемся после использования
+            }
         }
     }
 }

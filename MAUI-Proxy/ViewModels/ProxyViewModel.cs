@@ -3,6 +3,7 @@ using System.Net;
 using System.Net.Http;
 using System.Runtime.CompilerServices;
 using System.Windows.Input;
+using Android.App;
 using Android.Content;
 using Android.Net;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -15,57 +16,99 @@ namespace MAUI_Proxy.ViewModels
     public partial class ProxyViewModel : ObservableObject
     {
         [ObservableProperty]
-        private string _status = "Готов для подключения";
+        private string _status = "Готов к подключению";
 
         [ObservableProperty]
         private bool _isConnected;
 
         [ObservableProperty]
         private bool _isConnecting;
-        public ProxySettings Settings { get; } = new();
+
+        [ObservableProperty]
+        private string _ipAddress;
+
+        [ObservableProperty]
+        private int _port = 1;
+
+        [ObservableProperty]
+        private string _username;
+
+        [ObservableProperty]
+        private string _password;
+
+        public ProxySettings Settings => new()
+        {
+            IpAddress = IpAddress,
+            Port = Port,
+            Username = Username,
+            Password = Password,
+            BypassList = new List<string>()
+        };
 
         [RelayCommand]
         private async Task ToggleConnection()
         {
+            if (IsConnected)
+            {
+                await Disconnect();
+                return;
+            }
+
+            await Connect();
+        }
+
+        private async Task Connect()
+        {
+            if (string.IsNullOrWhiteSpace(IpAddress))
+            {
+                Status = "Введите адрес сервера";
+                return;
+            }
+
+            IsConnecting = true;
+            Status = "Запрос разрешения для VPN";
+
             try
             {
-                if (IsConnected)
-                {
-                    await Disconnect();
-                    return;
-                }
-
-                IsConnecting = true;
-                Status = "Запрос разрешения для впн";
-
 #if ANDROID
                 var context = Platform.CurrentActivity;
-                var vpnIntent = VpnService.Prepare(context);
-
-                if (vpnIntent != null)
+                if (context == null)
                 {
-                    // Проверяем, что Shell инициализирован
-                    if (Shell.Current != null)
-                    {
-                        await Shell.Current.GoToAsync("//vpnpermission");
-                    }
-                    else
-                    {
-                        context.StartActivity(vpnIntent);
-                    }
+                    Status = "Ошибка: контекст не найден";
                     return;
                 }
 
+                // Проверяем разрешение VPN
+                var vpnIntent = VpnService.Prepare(context);
+                if (vpnIntent != null)
+                {
+                    var result = await StartVpnPermissionActivity(context, vpnIntent);
+                    if (!result)
+                    {
+                        Status = "Разрешение не получено";
+                        return;
+                    }
+                }
+
+                // Запускаем сервис
                 var startIntent = ProxyVpnService.GetStartIntent(context, Settings);
-                context.StartService(startIntent);
+
+                if (Android.OS.Build.VERSION.SdkInt >= Android.OS.BuildVersionCodes.O)
+                {
+                    context.StartForegroundService(startIntent);
+                }
+                else
+                {
+                    context.StartService(startIntent);
+                }
 
                 IsConnected = true;
-                Status = "Connected to proxy";
+                Status = $"Подключено к {IpAddress}";
 #endif
             }
             catch (Exception ex)
             {
-                Status = $"Error: {ex.Message}";
+                Status = $"Ошибка: {ex.Message}";
             }
             finally
             {
@@ -73,59 +116,46 @@ namespace MAUI_Proxy.ViewModels
             }
         }
 
-
-        private async Task Connect()
+#if ANDROID
+        private Task<bool> StartVpnPermissionActivity(Context context, Intent vpnIntent)
         {
-            IsConnecting = true;
-            Status = "Запрос разрешения для VPN";
-            
-            try
+            var tcs = new TaskCompletionSource<bool>();
+
+            var activity = Platform.CurrentActivity as MainActivity;
+            if (activity == null)
             {
-                var context = Platform.CurrentActivity;
-                var vpnIntent = VpnService.Prepare(context);
-                
-                if (vpnIntent != null)
-                {
-                    await Shell.Current.GoToAsync("//vpnpermission");
-                    var result = await Task.Run(() => 
-                    {
-                        context.StartActivity(vpnIntent);
-                        return false; // В реальности нужно отслеживать результат
-                    });
-                    
-                    if (!result)
-                        return;
-                }
-                var startIntent = ProxyVpnService.GetStartIntent(context, Settings);
-                context.StartService(startIntent);
-                
-                IsConnected = true;
-                Status = "Connected to proxy";
+                tcs.SetResult(false);
+                return tcs.Task;
             }
-            catch (Exception ex)
+
+            activity.VpnPermissionResultHandler = (result) =>
             {
-                Status = $"Error: {ex.Message}";
-            }
-            finally
-            {
-                IsConnecting = false;
-            }
+                tcs.SetResult(result == Result.Ok);
+            };
+
+            activity.StartActivityForResult(vpnIntent, 0);
+            return tcs.Task;
         }
+#endif
 
         private async Task Disconnect()
         {
             try
             {
+#if ANDROID
                 var context = Platform.CurrentActivity;
+                if (context == null) return;
+
                 var stopIntent = new Intent(context, typeof(ProxyVpnService));
                 context.StopService(stopIntent);
-                
+
                 IsConnected = false;
-                Status = "Disconnected";
+                Status = "Отключено";
+#endif
             }
             catch (Exception ex)
             {
-                Status = $"Disconnect error: {ex.Message}";
+                Status = $"Ошибка отключения: {ex.Message}";
             }
         }
     }
